@@ -7,9 +7,17 @@
       "config": {
         "distDir": "dist/spa"
       }
+    },
+    {
+      "src": "api/[...path].ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/[...path].ts"
+    },
     {
       "handle": "filesystem"
     },
