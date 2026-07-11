@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { EditorPane } from "@/components/layout/EditorPane";
 import { AnalysisPanel } from "@/components/tabs/AnalysisPanel";
 import { Toolbar } from "@/components/toolbar/Toolbar";
-import { tokenize } from "@/services/lexApi";
+import { tokenizeLex } from "@/lib/lex";
 import type { AnalysisResult, OutputTab } from "@/types/lex";
 
 const starterLex = `DIGIT      [0-9]
@@ -27,9 +27,25 @@ export default function Index() {
 
   async function handleAnalyze() {
     setAnalyzing(true);
-    try { setResult(await tokenize(lexSpecification, source)); setActiveTab("tokens"); }
-    catch { setResult({ tokens: [], errors: [{ message: "Could not reach the analysis service", line: 1, column: 1 }], logs: ["Analysis request failed."] }); setActiveTab("errors"); }
-    finally { setAnalyzing(false); }
+    try {
+      setResult(tokenizeLex(lexSpecification, source));
+      setActiveTab("tokens");
+    } catch (error) {
+      setResult({
+        tokens: [],
+        errors: [
+          {
+            message: error instanceof Error ? error.message : "Could not perform analysis",
+            line: 1,
+            column: 1,
+          },
+        ],
+        logs: ["Analysis failed."],
+      });
+      setActiveTab("errors");
+    } finally {
+      setAnalyzing(false);
+    }
   }
   function handleClear() { setSource(""); setResult({ tokens: [], errors: [], logs: ["Input cleared."] }); }
   function handleImport(event: React.ChangeEvent<HTMLInputElement>) { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setLexSpecification(String(reader.result)); reader.readAsText(file); event.target.value = ""; }
@@ -40,7 +56,7 @@ export default function Index() {
     <input ref={inputRef} type="file" accept=".l,.lex,.txt" className="hidden" onChange={handleImport} />
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
       <div className="flex min-h-0 min-w-0 flex-[1.06] flex-col border-b border-[#242b3d] lg:border-b-0 lg:border-r"><EditorPane title="Lex specification" fileName="rules.lex" language="plaintext" value={lexSpecification} onChange={setLexSpecification} /><EditorPane title="Source input" fileName="input.txt" language="plaintext" value={source} onChange={setSource} /></div>
-      <div className="flex min-h-[260px] min-w-0 flex-1 flex-col"><div className="flex h-11 shrink-0 items-center border-b border-[#242b3d] bg-[#111725] px-4"><span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Analysis output</span><span className="ml-auto rounded bg-cyan-400/10 px-2 py-1 text-[10px] font-semibold text-cyan-300">MOCK MODE</span></div><AnalysisPanel activeTab={activeTab} onTabChange={setActiveTab} result={result} /></div>
+      <div className="flex min-h-[260px] min-w-0 flex-1 flex-col"><div className="flex h-11 shrink-0 items-center border-b border-[#242b3d] bg-[#111725] px-4"><span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Analysis output</span><span className="ml-auto rounded bg-cyan-400/10 px-2 py-1 text-[10px] font-semibold text-cyan-300">Client analysis</span></div><AnalysisPanel activeTab={activeTab} onTabChange={setActiveTab} result={result} /></div>
     </div>
     <footer className="flex h-8 shrink-0 items-center justify-between border-t border-[#242b3d] bg-[#111725] px-4 text-[10px] text-slate-500"><span>UTF-8</span><span className="hidden sm:inline">Lex Studio · Phase 1 UI</span><span>Ln 1, Col 1</span></footer>
   </main>;
